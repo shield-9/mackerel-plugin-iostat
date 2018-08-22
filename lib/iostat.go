@@ -64,6 +64,7 @@ func (i IostatPlugin) GraphDefinition() map[string]mp.Graphs {
 				{Name: "total", Label: "total"},
 				{Name: "read", Label: "read", Stacked: true},
 				{Name: "write", Label: "write", Stacked: true},
+				{Name: "svctm", Label: "svctm"},
 			},
 		},
 	}
@@ -126,7 +127,7 @@ func (i IostatPlugin) FetchMetrics() (map[string]float64, error) {
 			result["device.await."+device+".total"] = await
 			result["device.await."+device+".read"] = r_await
 			result["device.await."+device+".write"] = w_await
-			result["device.others"+device+".svctm"] = svctm
+			result["device.await."+device+".svctm"] = svctm
 			result["device.others"+device+".util"] = util
 
 		}
