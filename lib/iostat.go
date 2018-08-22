@@ -68,14 +68,14 @@ func (i IostatPlugin) FetchMetrics() (map[string]float64, error) {
 	if err != nil {
 		return nil, fmt.Errorf("'iostat -xk' command exited with a non-zero status: %s", err)
 	}
-	result := make(map[string]interface{})
+	result := make(map[string]float64)
 	for _, line := range strings.Split(string(io), "\n") {
 		if iostatVersionHeaderPattern.MatchString(line) || iostatCpuHeaderPattern.MatchString(line) || iostatDeviceHeaderPattern.MatchString(line) {
 			continue
 		} else if matches := iostatCpuColumnsPattern.FindStringSubmatch(line); matches != nil {
-			fmt.Printf("Cpu: %q\n", matches[1:])
+			//fmt.Printf("Cpu: %q\n", matches[1:])
 		} else if matches := iostatDeviceColumnsPattern.FindStringSubmatch(line); matches != nil {
-			fmt.Printf("Dev: %q\n", matches[1:])
+			//fmt.Printf("Dev: %q\n", matches[1:])
 			device := matches[1]
 			rrqmps, err := strconv.ParseFloat(matches[2], 64)
 			wrqmps, err := strconv.ParseFloat(matches[3], 64)
@@ -90,18 +90,18 @@ func (i IostatPlugin) FetchMetrics() (map[string]float64, error) {
 				return nil, fmt.Errorf("Failed to parse value: %s", err)
 			}
 
-			result["iostat.request."+device+".read_merged"] = rrqmps
-			result["iostat.request."+device+".write_merged"] = wrqmps
-			result["iostat.request."+device+".read_completed"] = rps
-			result["iostat.request."+device+".write_completed"] = wps
-			result["iostat.transfer."+device+".read"] = rkbps
-			result["iostat.transfer."+device+".write"] = wkbps
-			result["iostat.request."+device+".avg_size"] = avgrq_sz
-			result["iostat.request."+device+".avg_queue"] = avgqu_sz
+			result["device.request."+device+".read_merged"] = rrqmps
+			result["device.request."+device+".write_merged"] = wrqmps
+			result["device.request."+device+".read_completed"] = rps
+			result["device.request."+device+".write_completed"] = wps
+			result["device.transfer."+device+".read"] = rkbps
+			result["device.transfer."+device+".write"] = wkbps
+			result["device.request."+device+".avg_size"] = avgrq_sz
+			result["device.request."+device+".avg_queue"] = avgqu_sz
 
 		}
 	}
-	return map[string]float64{"seconds": 0}, nil
+	return result, nil
 }
 
 func (i IostatPlugin) MetricKeyPrefix() string {
