@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"regexp"
+	"strconv"
 	"strings"
 
 	mp "github.com/mackerelio/go-mackerel-plugin"
@@ -13,6 +15,26 @@ import (
 type IostatPlugin struct {
 	Prefix string
 }
+
+var iostatVersionHeaderPattern = regexp.MustCompile(
+	`^Linux\s+.+\sCPU\)$`,
+)
+
+var iostatCpuHeaderPattern = regexp.MustCompile(
+	`^avg-cpu:\s+`,
+)
+
+var iostatDeviceHeaderPattern = regexp.MustCompile(
+	`^Device:\s+`,
+)
+
+var iostatCpuColumnsPattern = regexp.MustCompile(
+	`^\s*(\d+(?:\.\d+)?)\s+(\d+(?:\.\d+)?)\s+(\d+(?:\.\d+)?)\s+(\d+(?:\.\d+)?)\s+(\d+(?:\.\d+)?)\s+(\d+(?:\.\d+)?)\s*$`,
+)
+
+var iostatDeviceColumnsPattern = regexp.MustCompile(
+	`^(\S+)\s+(\d+(?:\.\d+)?)\s+(\d+(?:\.\d+)?)\s+(\d+(?:\.\d+)?)\s+(\d+(?:\.\d+)?)\s+(\d+(?:\.\d+)?)\s+(\d+(?:\.\d+)?)\s+(\d+(?:\.\d+)?)\s+(\d+(?:\.\d+)?)\s+(\d+(?:\.\d+)?)\s+(\d+(?:\.\d+)?)\s+(\d+(?:\.\d+)?)\s+(\d+(?:\.\d+)?)\s+(\d+(?:\.\d+)?)\s*$`,
+)
 
 func (i IostatPlugin) GraphDefinition() map[string]mp.Graphs {
 	labelPrefix := strings.Title(i.MetricKeyPrefix())
@@ -33,6 +55,39 @@ func (i IostatPlugin) FetchMetrics() (map[string]float64, error) {
 	io, err := cmd.Output()
 	if err != nil {
 		return nil, fmt.Errorf("'iostat -xk' command exited with a non-zero status: %s", err)
+	}
+	result := make(map[string]interface{})
+	for _, line := range strings.Split(string(io), "\n") {
+		if iostatVersionHeaderPattern.MatchString(line) || iostatCpuHeaderPattern.MatchString(line) || iostatDeviceHeaderPattern.MatchString(line) {
+			continue
+		} else if matches := iostatCpuColumnsPattern.FindStringSubmatch(line); matches != nil {
+			fmt.Printf("Cpu: %q\n", matches[1:])
+		} else if matches := iostatDeviceColumnsPattern.FindStringSubmatch(line); matches != nil {
+			fmt.Printf("Dev: %q\n", matches[1:])
+			device := matches[1]
+			rrqmps, err := strconv.ParseFloat(matches[2], 64)
+			wrqmps, err := strconv.ParseFloat(matches[3], 64)
+			rps, err := strconv.ParseFloat(matches[4], 64)
+			wps, err := strconv.ParseFloat(matches[5], 64)
+			rkbps, err := strconv.ParseFloat(matches[6], 64)
+			wkbps, err := strconv.ParseFloat(matches[7], 64)
+			avgrq_sz, err := strconv.ParseFloat(matches[8], 64)
+			avgqu_sz, err := strconv.ParseFloat(matches[9], 64)
+
+			if err != nil {
+				return nil, fmt.Errorf("Failed to parse value: %s", err)
+			}
+
+			result["iostat.request."+device+".read_merged"] = rrqmps
+			result["iostat.request."+device+".write_merged"] = wrqmps
+			result["iostat.request."+device+".read_completed"] = rps
+			result["iostat.request."+device+".write_completed"] = wps
+			result["iostat.transfer."+device+".read"] = rkbps
+			result["iostat.transfer."+device+".write"] = wkbps
+			result["iostat.request."+device+".avg_size"] = avgrq_sz
+			result["iostat.request."+device+".avg_queue"] = avgqu_sz
+
+		}
 	}
 	return map[string]float64{"seconds": 0}, nil
 }
