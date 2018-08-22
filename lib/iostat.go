@@ -53,8 +53,8 @@ func (i IostatPlugin) GraphDefinition() map[string]mp.Graphs {
 			Label: (labelPrefix + "  Device Utilization - Transfer"),
 			Unit:  mp.UnitBytesPerSecond,
 			Metrics: []mp.Metrics{
-				{Name: "read", Label: "read", Scale: 1024},
-				{Name: "write", Label: "write", Scale: 1024},
+				{Name: "read", Label: "read", Scale: 1024, Stacked: true},
+				{Name: "write", Label: "write", Scale: 1024, Stacked: true},
 			},
 		},
 		"device.await.#": {
@@ -62,8 +62,8 @@ func (i IostatPlugin) GraphDefinition() map[string]mp.Graphs {
 			Unit:  mp.UnitFloat,
 			Metrics: []mp.Metrics{
 				{Name: "total", Label: "total"},
-				{Name: "read", Label: "read"},
-				{Name: "write", Label: "write"},
+				{Name: "read", Label: "read", Stacked: true},
+				{Name: "write", Label: "write", Stacked: true},
 			},
 		},
 	}
