@@ -85,6 +85,11 @@ func (i IostatPlugin) FetchMetrics() (map[string]float64, error) {
 			wkbps, err := strconv.ParseFloat(matches[7], 64)
 			avgrq_sz, err := strconv.ParseFloat(matches[8], 64)
 			avgqu_sz, err := strconv.ParseFloat(matches[9], 64)
+			await, err := strconv.ParseFloat(matches[10], 64)
+			r_await, err := strconv.ParseFloat(matches[11], 64)
+			w_await, err := strconv.ParseFloat(matches[12], 64)
+			svctm, err := strconv.ParseFloat(matches[13], 64)
+			util, err := strconv.ParseFloat(matches[14], 64)
 
 			if err != nil {
 				return nil, fmt.Errorf("Failed to parse value: %s", err)
@@ -98,6 +103,11 @@ func (i IostatPlugin) FetchMetrics() (map[string]float64, error) {
 			result["device.transfer."+device+".write"] = wkbps
 			result["device.request."+device+".avg_size"] = avgrq_sz
 			result["device.request."+device+".avg_queue"] = avgqu_sz
+			result["device.await."+device+".total"] = await
+			result["device.await."+device+".read"] = r_await
+			result["device.await."+device+".write"] = w_await
+			result["device.others"+device+".svctm"] = svctm
+			result["device.others"+device+".util"] = util
 
 		}
 	}
