@@ -39,11 +39,31 @@ var iostatDeviceColumnsPattern = regexp.MustCompile(
 func (i IostatPlugin) GraphDefinition() map[string]mp.Graphs {
 	labelPrefix := strings.Title(i.MetricKeyPrefix())
 	return map[string]mp.Graphs{
-		"": {
-			Label: labelPrefix,
+		"device.request.#": {
+			Label: (labelPrefix + " Device Utilization - Requests"),
+			Unit:  mp.UnitIOPS,
+			Metrics: []mp.Metrics{
+				{Name: "read_merged", Label: "read merged"},
+				{Name: "write_merged", Label: "write merged"},
+				{Name: "read_completed", Label: "read completed"},
+				{Name: "write_completed", Label: "write completed"},
+			},
+		},
+		"device.transfer.#": {
+			Label: (labelPrefix + "  Device Utilization - Transfer"),
+			Unit:  mp.UnitBytesPerSecond,
+			Metrics: []mp.Metrics{
+				{Name: "read", Label: "read", Scale: 1024},
+				{Name: "write", Label: "write", Scale: 1024},
+			},
+		},
+		"device.await.#": {
+			Label: (labelPrefix + " Device Utilization - Await"),
 			Unit:  mp.UnitFloat,
 			Metrics: []mp.Metrics{
-				{Name: "seconds", Label: "seconds"},
+				{Name: "total", Label: "total"},
+				{Name: "read", Label: "read"},
+				{Name: "write", Label: "write"},
 			},
 		},
 	}
