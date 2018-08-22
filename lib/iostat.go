@@ -67,6 +67,13 @@ func (i IostatPlugin) GraphDefinition() map[string]mp.Graphs {
 				{Name: "svctm", Label: "svctm"},
 			},
 		},
+		"device.percentage.#": {
+			Label: (labelPrefix + " Device Utilization - Percentage"),
+			Unit:  mp.UnitPercentage,
+			Metrics: []mp.Metrics{
+				{Name: "util", Label: "util"},
+			},
+		},
 	}
 }
 
@@ -128,7 +135,7 @@ func (i IostatPlugin) FetchMetrics() (map[string]float64, error) {
 			result["device.await."+device+".read"] = r_await
 			result["device.await."+device+".write"] = w_await
 			result["device.await."+device+".svctm"] = svctm
-			result["device.others"+device+".util"] = util
+			result["device.percentage"+device+".util"] = util
 
 		}
 	}
