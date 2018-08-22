@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	mp "github.com/mackerelio/go-mackerel-plugin"
-	"github.com/mackerelio/go-osstat/uptime"
 )
 
 type IostatPlugin struct {
@@ -27,22 +26,20 @@ func (i IostatPlugin) GraphDefinition() map[string]mp.Graphs {
 }
 
 func (i IostatPlugin) FetchMetrics() (map[string]float64, error) {
-	ut, err := uptime.Get()
 	if err != nil {
-		return nil, fmt.Errorf("Failed to fetch uptime metrics: %s", err)
 	}
-	return map[string]float64{"seconds": ut.Seconds()}, nil
+	return map[string]float64{"seconds": 0}, nil
 }
 
 func (i IostatPlugin) MetricKeyPrefix() string {
 	if i.Prefix == "" {
-		i.Prefix = "uptime"
+		i.Prefix = "iostat"
 	}
 	return i.Prefix
 }
 
 func Do() {
-	optPrefix := flag.String("metric-key-prefix", "uptime", "Metric key prefix")
+	optPrefix := flag.String("metric-key-prefix", "iostat", "Metric key prefix")
 	optTempfile := flag.String("tempfile", "", "Temp file name")
 	flag.Parse()
 
