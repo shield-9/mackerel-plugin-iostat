@@ -49,6 +49,18 @@ func (i IostatPlugin) GraphDefinition() map[string]mp.Graphs {
 	}
 }
 
+/*
+$ iostat -xk
+Linux 3.10.0-862.3.2.el7.x86_64 (daisuke-tf-01.novalocal) 	08/22/18 	_x86_64_	(2 CPU)
+
+avg-cpu:  %user   %nice %system %iowait  %steal   %idle
+           0.08    0.00    0.04    0.00    0.00   99.87
+
+Device:         rrqm/s   wrqm/s     r/s     w/s    rkB/s    wkB/s avgrq-sz avgqu-sz   await r_await w_await  svctm  %util
+vda               0.00     0.03    0.44    0.22    23.15    13.73   112.51     0.00    1.56    0.71    3.24   0.41   0.03
+vdb               0.00     0.00    0.01    0.00     0.22     0.00    47.27     0.00    0.32    0.32    0.00   0.20   0.00
+*/
+
 func (i IostatPlugin) FetchMetrics() (map[string]float64, error) {
 	cmd := exec.Command("iostat", "-xk")
 	cmd.Env = append(os.Environ(), "LANG=C")
