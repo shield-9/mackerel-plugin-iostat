@@ -74,6 +74,14 @@ func (i IostatPlugin) GraphDefinition() map[string]mp.Graphs {
 				{Name: "util", Label: "util"},
 			},
 		},
+		"device.average.#": {
+			Label: (labelPrefix + " Device Utilization - Average"),
+			Unit:  mp.UnitFloat,
+			Metrics: []mp.Metrics{
+				{Name: "request_size", Label: "request size sectors"},
+				{Name: "queue_length", Label: "queue length"},
+			},
+		},
 	}
 }
 
@@ -129,8 +137,8 @@ func (i IostatPlugin) FetchMetrics() (map[string]float64, error) {
 			result["device.request."+device+".write_completed"] = wps
 			result["device.transfer."+device+".read"] = rkbps
 			result["device.transfer."+device+".write"] = wkbps
-			result["device.request."+device+".avg_size"] = avgrq_sz
-			result["device.request."+device+".avg_queue"] = avgqu_sz
+			result["device.average."+device+".request_size"] = avgrq_sz
+			result["device.average."+device+".queue_length"] = avgqu_sz
 			result["device.await."+device+".total"] = await
 			result["device.await."+device+".read"] = r_await
 			result["device.await."+device+".write"] = w_await
