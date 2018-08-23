@@ -1,7 +1,6 @@
 package mpiostat
 
 import (
-	"encoding/json"
 	"flag"
 	"fmt"
 	"io/ioutil"
@@ -23,47 +22,45 @@ var iostatColumnsPattern = regexp.MustCompile(
 func (i IostatPlugin) GraphDefinition() map[string]mp.Graphs {
 	labelPrefix := strings.Title(i.MetricKeyPrefix())
 	return map[string]mp.Graphs{
-		"device.request.#": {
-			Label: (labelPrefix + " Device Utilization - Requests"),
-			Unit:  mp.UnitIOPS,
+		"disk.request.#": {
+			Label: (labelPrefix + " Requests"),
+			Unit:  mp.UnitInteger,
 			Metrics: []mp.Metrics{
-				{Name: "read_merged", Label: "read merged"},
-				{Name: "write_merged", Label: "write merged"},
-				{Name: "read_completed", Label: "read completed"},
-				{Name: "write_completed", Label: "write completed"},
+				{Name: "reads", Label: "read", Diff: true},
+				{Name: "writes", Label: "write", Diff: true},
 			},
 		},
-		"device.transfer.#": {
-			Label: (labelPrefix + "  Device Utilization - Transfer"),
-			Unit:  mp.UnitBytesPerSecond,
+		"disk.merge.#": {
+			Label: (labelPrefix + " Merge"),
+			Unit:  mp.UnitInteger,
 			Metrics: []mp.Metrics{
-				{Name: "read", Label: "read", Scale: 1024, Stacked: true},
-				{Name: "write", Label: "write", Scale: 1024, Stacked: true},
+				{Name: "reads", Label: "read", Diff: true},
+				{Name: "writes", Label: "write", Diff: true},
 			},
 		},
-		"device.await.#": {
-			Label: (labelPrefix + " Device Utilization - Await"),
-			Unit:  mp.UnitFloat,
+		"disk.sector.#": {
+			Label: (labelPrefix + " Traffic (sectors)"),
+			Unit:  mp.UnitInteger,
 			Metrics: []mp.Metrics{
-				{Name: "total", Label: "total"},
-				{Name: "read", Label: "read", Stacked: true},
-				{Name: "write", Label: "write", Stacked: true},
-				{Name: "svctm", Label: "svctm"},
+				{Name: "read", Label: "read", Diff: true},
+				{Name: "written", Label: "write", Diff: true},
 			},
 		},
-		"device.percentage.#": {
-			Label: (labelPrefix + " Device Utilization - Percentage"),
-			Unit:  mp.UnitPercentage,
+		"disk.time.#": {
+			Label: (labelPrefix + " Time (ms)"),
+			Unit:  mp.UnitInteger,
 			Metrics: []mp.Metrics{
-				{Name: "util", Label: "util"},
+				{Name: "read", Label: "read", Diff: true},
+				{Name: "write", Label: "write", Diff: true},
+				{Name: "io", Label: "io", Diff: true},
+				{Name: "ioWeighted", Label: "io weighted", Diff: true},
 			},
 		},
-		"device.average.#": {
-			Label: (labelPrefix + " Device Utilization - Average"),
-			Unit:  mp.UnitFloat,
+		"disk.inprogress.#": {
+			Label: (labelPrefix + " IO in Progress"),
+			Unit:  mp.UnitInteger,
 			Metrics: []mp.Metrics{
-				{Name: "request_size", Label: "request size sectors"},
-				{Name: "queue_length", Label: "queue length"},
+				{Name: "io", Label: "io"},
 			},
 		},
 	}
@@ -111,6 +108,7 @@ func (i IostatPlugin) FetchMetrics() (map[string]float64, error) {
 			}
 		}
 	}
+
 	return result, nil
 }
 
