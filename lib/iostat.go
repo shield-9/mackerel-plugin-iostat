@@ -22,7 +22,7 @@ var iostatColumnsPattern = regexp.MustCompile(
 func (i IostatPlugin) GraphDefinition() map[string]mp.Graphs {
 	labelPrefix := strings.Title(i.MetricKeyPrefix())
 	return map[string]mp.Graphs{
-		"disk.request.#": {
+		"request.#": {
 			Label: (labelPrefix + " Requests"),
 			Unit:  mp.UnitInteger,
 			Metrics: []mp.Metrics{
@@ -30,7 +30,7 @@ func (i IostatPlugin) GraphDefinition() map[string]mp.Graphs {
 				{Name: "writes", Label: "write", Diff: true},
 			},
 		},
-		"disk.merge.#": {
+		"merge.#": {
 			Label: (labelPrefix + " Merge"),
 			Unit:  mp.UnitInteger,
 			Metrics: []mp.Metrics{
@@ -38,7 +38,7 @@ func (i IostatPlugin) GraphDefinition() map[string]mp.Graphs {
 				{Name: "writes", Label: "write", Diff: true},
 			},
 		},
-		"disk.sector.#": {
+		"sector.#": {
 			Label: (labelPrefix + " Traffic (sectors)"),
 			Unit:  mp.UnitInteger,
 			Metrics: []mp.Metrics{
@@ -46,7 +46,7 @@ func (i IostatPlugin) GraphDefinition() map[string]mp.Graphs {
 				{Name: "written", Label: "write", Diff: true},
 			},
 		},
-		"disk.time.#": {
+		"time.#": {
 			Label: (labelPrefix + " Time (ms)"),
 			Unit:  mp.UnitInteger,
 			Metrics: []mp.Metrics{
@@ -56,7 +56,7 @@ func (i IostatPlugin) GraphDefinition() map[string]mp.Graphs {
 				{Name: "ioWeighted", Label: "io weighted", Diff: true},
 			},
 		},
-		"disk.inprogress.#": {
+		"inprogress.#": {
 			Label: (labelPrefix + " IO in Progress"),
 			Unit:  mp.UnitInteger,
 			Metrics: []mp.Metrics{
@@ -100,7 +100,7 @@ func (i IostatPlugin) FetchMetrics() (map[string]float64, error) {
 
 			for i, metric := range matches[3:] {
 				// TODO: Sanitize these values.
-				key := fmt.Sprintf("disk.%s", strings.Replace(metricNames[i], ".", "."+device+".", 1))
+				key := strings.Replace(metricNames[i], ".", "."+device+".", 1)
 				result[key], err = strconv.ParseFloat(metric, 64)
 				if err != nil {
 					return nil, fmt.Errorf("Failed to parse value: %s", err)
