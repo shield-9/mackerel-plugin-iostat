@@ -1,10 +1,10 @@
 package mpiostat
 
 import (
+	"encoding/json"
 	"flag"
 	"fmt"
-	"os"
-	"os/exec"
+	"io/ioutil"
 	"regexp"
 	"strconv"
 	"strings"
@@ -16,24 +16,8 @@ type IostatPlugin struct {
 	Prefix string
 }
 
-var iostatVersionHeaderPattern = regexp.MustCompile(
-	`^Linux\s+.+\sCPU\)$`,
-)
-
-var iostatCpuHeaderPattern = regexp.MustCompile(
-	`^avg-cpu:\s+`,
-)
-
-var iostatDeviceHeaderPattern = regexp.MustCompile(
-	`^Device:\s+`,
-)
-
-var iostatCpuColumnsPattern = regexp.MustCompile(
-	`^\s*(\d+(?:\.\d+)?)\s+(\d+(?:\.\d+)?)\s+(\d+(?:\.\d+)?)\s+(\d+(?:\.\d+)?)\s+(\d+(?:\.\d+)?)\s+(\d+(?:\.\d+)?)\s*$`,
-)
-
-var iostatDeviceColumnsPattern = regexp.MustCompile(
-	`^(\S+)\s+(\d+(?:\.\d+)?)\s+(\d+(?:\.\d+)?)\s+(\d+(?:\.\d+)?)\s+(\d+(?:\.\d+)?)\s+(\d+(?:\.\d+)?)\s+(\d+(?:\.\d+)?)\s+(\d+(?:\.\d+)?)\s+(\d+(?:\.\d+)?)\s+(\d+(?:\.\d+)?)\s+(\d+(?:\.\d+)?)\s+(\d+(?:\.\d+)?)\s+(\d+(?:\.\d+)?)\s+(\d+(?:\.\d+)?)\s*$`,
+var iostatColumnsPattern = regexp.MustCompile(
+	`^(\d+)\s+(\d+)\s+(\S+)\s+(\d+)\s+(\d+?)\s+(\d+?)\s+(\d+?)\s+(\d+?)\s+(\d+?)\s+(\d+?)\s+(\d+?)\s+(\d+?)\s+(\d+?)\s+(\d+?)$`,
 )
 
 func (i IostatPlugin) GraphDefinition() map[string]mp.Graphs {
@@ -86,65 +70,45 @@ func (i IostatPlugin) GraphDefinition() map[string]mp.Graphs {
 }
 
 /*
-$ iostat -xk
-Linux 3.10.0-862.3.2.el7.x86_64 (daisuke-tf-01.novalocal) 	08/22/18 	_x86_64_	(2 CPU)
-
-avg-cpu:  %user   %nice %system %iowait  %steal   %idle
-           0.08    0.00    0.04    0.00    0.00   99.87
-
-Device:         rrqm/s   wrqm/s     r/s     w/s    rkB/s    wkB/s avgrq-sz avgqu-sz   await r_await w_await  svctm  %util
-vda               0.00     0.03    0.44    0.22    23.15    13.73   112.51     0.00    1.56    0.71    3.24   0.41   0.03
-vdb               0.00     0.00    0.01    0.00     0.22     0.00    47.27     0.00    0.32    0.32    0.00   0.20   0.00
+$ cat /proc/diskstats
+ 253       0 vda 1535048 279 41601294 520508 73249233 7260487 540931528 10616000 0 5871704 11113052
+ 253       1 vda1 1534559 279 41576784 520420 46025748 7260487 540931528 8670868 0 3948708 9173652
+ 253      16 vdb 72583 27934 814612 11784 36796 368511 3242456 23704 0 25272 35452
 */
 
 func (i IostatPlugin) FetchMetrics() (map[string]float64, error) {
-	cmd := exec.Command("iostat", "-xk")
-	cmd.Env = append(os.Environ(), "LANG=C")
-	io, err := cmd.Output()
+	io, err := ioutil.ReadFile("/proc/diskstats")
 	if err != nil {
-		return nil, fmt.Errorf("'iostat -xk' command exited with a non-zero status: %s", err)
+		return nil, fmt.Errorf("Cannot read from file /proc/diskstats: %s", err)
 	}
 	result := make(map[string]float64)
 	for _, line := range strings.Split(string(io), "\n") {
-		if iostatVersionHeaderPattern.MatchString(line) || iostatCpuHeaderPattern.MatchString(line) || iostatDeviceHeaderPattern.MatchString(line) {
-			continue
-		} else if matches := iostatCpuColumnsPattern.FindStringSubmatch(line); matches != nil {
-			//fmt.Printf("Cpu: %q\n", matches[1:])
-		} else if matches := iostatDeviceColumnsPattern.FindStringSubmatch(line); matches != nil {
-			//fmt.Printf("Dev: %q\n", matches[1:])
-			device := matches[1]
-			rrqmps, err := strconv.ParseFloat(matches[2], 64)
-			wrqmps, err := strconv.ParseFloat(matches[3], 64)
-			rps, err := strconv.ParseFloat(matches[4], 64)
-			wps, err := strconv.ParseFloat(matches[5], 64)
-			rkbps, err := strconv.ParseFloat(matches[6], 64)
-			wkbps, err := strconv.ParseFloat(matches[7], 64)
-			avgrq_sz, err := strconv.ParseFloat(matches[8], 64)
-			avgqu_sz, err := strconv.ParseFloat(matches[9], 64)
-			await, err := strconv.ParseFloat(matches[10], 64)
-			r_await, err := strconv.ParseFloat(matches[11], 64)
-			w_await, err := strconv.ParseFloat(matches[12], 64)
-			svctm, err := strconv.ParseFloat(matches[13], 64)
-			util, err := strconv.ParseFloat(matches[14], 64)
-
-			if err != nil {
-				return nil, fmt.Errorf("Failed to parse value: %s", err)
+		if matches := strings.Fields(line); len(matches) > 0 {
+			// Skip for empty line. See https://github.com/golang/go/issues/13075 for details.
+			if len(matches[0]) == 0 {
+				continue
 			}
 
-			result["device.request."+device+".read_merged"] = rrqmps
-			result["device.request."+device+".write_merged"] = wrqmps
-			result["device.request."+device+".read_completed"] = rps
-			result["device.request."+device+".write_completed"] = wps
-			result["device.transfer."+device+".read"] = rkbps
-			result["device.transfer."+device+".write"] = wkbps
-			result["device.average."+device+".request_size"] = avgrq_sz
-			result["device.average."+device+".queue_length"] = avgqu_sz
-			result["device.await."+device+".total"] = await
-			result["device.await."+device+".read"] = r_await
-			result["device.await."+device+".write"] = w_await
-			result["device.await."+device+".svctm"] = svctm
-			result["device.percentage."+device+".util"] = util
+			device := matches[2]
 
+			// TODO: Skip virtual devices, such as loop devices.
+
+			// "Discard"s are introduced in Kernel 4.18. See linux/Documentation/iostats.txt for details.
+			metricNames := []string{
+				"request.reads", "merge.reads", "sector.read", "time.read",
+				"request.writes", "merge.writes", "sector.written", "time.write",
+				"inprogress.io", "time.io", "time.ioWeighted",
+				"request.discards", "merge.discards", "sector.Discarded", "time.discard",
+			}
+
+			for i, metric := range matches[3:] {
+				// TODO: Sanitize these values.
+				key := fmt.Sprintf("disk.%s", strings.Replace(metricNames[i], ".", "."+device+".", 1))
+				result[key], err = strconv.ParseFloat(metric, 64)
+				if err != nil {
+					return nil, fmt.Errorf("Failed to parse value: %s", err)
+				}
+			}
 		}
 	}
 	return result, nil
