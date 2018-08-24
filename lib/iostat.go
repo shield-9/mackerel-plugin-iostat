@@ -86,7 +86,8 @@ func (i IostatPlugin) FetchMetrics() (map[string]float64, error) {
 				continue
 			}
 
-			device := matches[2]
+			deviceNamePattern := regexp.MustCompile(`[^[[:alnum:]]_-]`)
+			device := deviceNamePattern.ReplaceAllString(matches[2], "")
 
 			// TODO: Skip virtual devices, such as loop devices.
 
@@ -99,7 +100,6 @@ func (i IostatPlugin) FetchMetrics() (map[string]float64, error) {
 			}
 
 			for i, metric := range matches[3:] {
-				// TODO: Sanitize these values.
 				key := strings.Replace(metricNames[i], ".", "."+device+".", 1)
 				result[key], err = strconv.ParseFloat(metric, 64)
 				if err != nil {
