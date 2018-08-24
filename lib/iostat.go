@@ -114,13 +114,13 @@ func (i IostatPlugin) FetchMetrics() (map[string]float64, error) {
 
 func (i IostatPlugin) MetricKeyPrefix() string {
 	if i.Prefix == "" {
-		i.Prefix = "iostat"
+		i.Prefix = "disk"
 	}
 	return i.Prefix
 }
 
 func Do() {
-	optPrefix := flag.String("metric-key-prefix", "iostat", "Metric key prefix")
+	optPrefix := flag.String("metric-key-prefix", "disk", "Metric key prefix")
 	optTempfile := flag.String("tempfile", "", "Temp file name")
 	flag.Parse()
 
