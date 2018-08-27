@@ -15,9 +15,6 @@ type IostatPlugin struct {
 	Prefix string
 }
 
-var iostatColumnsPattern = regexp.MustCompile(
-	`^(\d+)\s+(\d+)\s+(\S+)\s+(\d+)\s+(\d+?)\s+(\d+?)\s+(\d+?)\s+(\d+?)\s+(\d+?)\s+(\d+?)\s+(\d+?)\s+(\d+?)\s+(\d+?)\s+(\d+?)$`,
-)
 
 func (i IostatPlugin) GraphDefinition() map[string]mp.Graphs {
 	labelPrefix := strings.Title(i.MetricKeyPrefix())
