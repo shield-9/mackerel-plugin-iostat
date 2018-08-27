@@ -20,7 +20,7 @@ func (i IostatPlugin) GraphDefinition() map[string]mp.Graphs {
 	labelPrefix := strings.Title(i.MetricKeyPrefix())
 	return map[string]mp.Graphs{
 		"request.#": {
-			Label: (labelPrefix + " Requests"),
+			Label: (labelPrefix + " Requests (/sec)"),
 			Unit:  mp.UnitIOPS,
 			Metrics: []mp.Metrics{
 				{Name: "reads", Label: "read", Diff: true},
@@ -28,7 +28,7 @@ func (i IostatPlugin) GraphDefinition() map[string]mp.Graphs {
 			},
 		},
 		"merge.#": {
-			Label: (labelPrefix + " Merge"),
+			Label: (labelPrefix + " Merge (/sec)"),
 			Unit:  mp.UnitFloat,
 			Metrics: []mp.Metrics{
 				{Name: "reads", Label: "read", Diff: true},
@@ -44,7 +44,7 @@ func (i IostatPlugin) GraphDefinition() map[string]mp.Graphs {
 			},
 		},
 		"time.#": {
-			Label: (labelPrefix + " Time (ms)"),
+			Label: (labelPrefix + " Time (ms/sec)"),
 			Unit:  mp.UnitFloat,
 			Metrics: []mp.Metrics{
 				{Name: "read", Label: "read", Diff: true},
@@ -105,6 +105,13 @@ func (i IostatPlugin) FetchMetrics() (map[string]float64, error) {
 
 				switch strings.Split(key, ".")[0] {
 				case "request", "merge", "sector", "time":
+					/*
+						Mackerel is designed to display metrics in per-minute, while I want "per-second".
+
+						\frac{(\frac{crntVal}{60} - \frac{lastVal}{60}) * 60}{crntTime - lastTime} = \frac{crntVal - lastVal}{crntTime - lastTime}
+
+						See https://github.com/mackerelio/go-mackerel-plugin/blob/3980df9bc6311013061fb7ff66498ce23e275bdf/mackerel-plugin.go#L156 for details.
+					*/
 					result[key] /= 60
 				}
 			}
