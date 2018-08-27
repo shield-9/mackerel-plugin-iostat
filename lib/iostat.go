@@ -24,7 +24,7 @@ func (i IostatPlugin) GraphDefinition() map[string]mp.Graphs {
 	return map[string]mp.Graphs{
 		"request.#": {
 			Label: (labelPrefix + " Requests"),
-			Unit:  mp.UnitInteger,
+			Unit:  mp.UnitIOPS,
 			Metrics: []mp.Metrics{
 				{Name: "reads", Label: "read", Diff: true},
 				{Name: "writes", Label: "write", Diff: true},
@@ -32,7 +32,7 @@ func (i IostatPlugin) GraphDefinition() map[string]mp.Graphs {
 		},
 		"merge.#": {
 			Label: (labelPrefix + " Merge"),
-			Unit:  mp.UnitInteger,
+			Unit:  mp.UnitFloat,
 			Metrics: []mp.Metrics{
 				{Name: "reads", Label: "read", Diff: true},
 				{Name: "writes", Label: "write", Diff: true},
@@ -40,7 +40,7 @@ func (i IostatPlugin) GraphDefinition() map[string]mp.Graphs {
 		},
 		"sector.#": {
 			Label: (labelPrefix + " Traffic (sectors)"),
-			Unit:  mp.UnitInteger,
+			Unit:  mp.UnitFloat,
 			Metrics: []mp.Metrics{
 				{Name: "read", Label: "read", Diff: true},
 				{Name: "written", Label: "write", Diff: true},
@@ -48,7 +48,7 @@ func (i IostatPlugin) GraphDefinition() map[string]mp.Graphs {
 		},
 		"time.#": {
 			Label: (labelPrefix + " Time (ms)"),
-			Unit:  mp.UnitInteger,
+			Unit:  mp.UnitFloat,
 			Metrics: []mp.Metrics{
 				{Name: "read", Label: "read", Diff: true},
 				{Name: "write", Label: "write", Diff: true},
@@ -104,6 +104,11 @@ func (i IostatPlugin) FetchMetrics() (map[string]float64, error) {
 				result[key], err = strconv.ParseFloat(metric, 64)
 				if err != nil {
 					return nil, fmt.Errorf("Failed to parse value: %s", err)
+				}
+
+				switch strings.Split(key, ".")[0] {
+				case "request", "merge", "sector", "time":
+					result[key] /= 60
 				}
 			}
 		}
