@@ -15,6 +15,13 @@ type IostatPlugin struct {
 	Prefix string
 }
 
+// "Discard"s are introduced in Kernel 4.18. See linux/Documentation/iostats.txt for details.
+var metricNames = []string{
+	"request.reads", "merge.reads", "sector.read", "time.read",
+	"request.writes", "merge.writes", "sector.written", "time.write",
+	"inprogress.io", "time.io", "time.ioWeighted",
+	"request.discards", "merge.discards", "sector.Discarded", "time.discard",
+}
 
 func (i IostatPlugin) GraphDefinition() map[string]mp.Graphs {
 	labelPrefix := strings.Title(i.MetricKeyPrefix())
@@ -87,14 +94,6 @@ func (i IostatPlugin) FetchMetrics() (map[string]float64, error) {
 			device := deviceNamePattern.ReplaceAllString(matches[2], "")
 
 			// TODO: Skip virtual devices, such as loop devices.
-
-			// "Discard"s are introduced in Kernel 4.18. See linux/Documentation/iostats.txt for details.
-			metricNames := []string{
-				"request.reads", "merge.reads", "sector.read", "time.read",
-				"request.writes", "merge.writes", "sector.written", "time.write",
-				"inprogress.io", "time.io", "time.ioWeighted",
-				"request.discards", "merge.discards", "sector.Discarded", "time.discard",
-			}
 
 			for i, metric := range matches[3:] {
 				key := strings.Replace(metricNames[i], ".", "."+device+".", 1)
