@@ -98,16 +98,18 @@ func (i IostatPlugin) FetchMetrics() (map[string]float64, error) {
 				continue
 			}
 
-			deviceNamePattern := regexp.MustCompile(`[^[[:alnum:]]_-]`)
-			device := deviceNamePattern.ReplaceAllString(matches[2], "")
+			device := matches[2]
 
 			// Skip if it's a virtual.
 			if val, ok := blocks[device]; ok && !val {
 				continue
 			}
 
+			deviceNamePattern := regexp.MustCompile(`[^[[:alnum:]]_-]`)
+			deviceDispName := deviceNamePattern.ReplaceAllString(device, "")
+
 			for i, metric := range matches[3:] {
-				key := strings.Replace(metricNames[i], ".", "."+device+".", 1)
+				key := strings.Replace(metricNames[i], ".", "."+deviceDispName+".", 1)
 				result[key], err = strconv.ParseFloat(metric, 64)
 				if err != nil {
 					return nil, fmt.Errorf("Failed to parse value: %s", err)
