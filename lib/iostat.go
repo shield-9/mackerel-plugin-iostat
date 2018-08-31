@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"io/ioutil"
+	"os"
 	"regexp"
 	"strconv"
 	"strings"
@@ -78,12 +79,17 @@ $ cat /proc/diskstats
  253       1 vda1 1534559 279 41576784 520420 46025748 7260487 540931528 8670868 0 3948708 9173652
  253      16 vdb 72583 27934 814612 11784 36796 368511 3242456 23704 0 25272 35452
 */
-
 func (i IostatPlugin) FetchMetrics() (map[string]float64, error) {
 	io, err := ioutil.ReadFile("/proc/diskstats")
 	if err != nil {
 		return nil, fmt.Errorf("Cannot read from file /proc/diskstats: %s", err)
 	}
+
+	blocks, err := i.fetchBlockdevices()
+	if err != nil {
+		return nil, err
+	}
+
 	result := make(map[string]float64)
 	for _, line := range strings.Split(string(io), "\n") {
 		if matches := strings.Fields(line); len(matches) > 0 {
@@ -95,7 +101,10 @@ func (i IostatPlugin) FetchMetrics() (map[string]float64, error) {
 			deviceNamePattern := regexp.MustCompile(`[^[[:alnum:]]_-]`)
 			device := deviceNamePattern.ReplaceAllString(matches[2], "")
 
-			// TODO: Skip virtual devices, such as loop devices.
+			// Skip if it's a virtual.
+			if val, ok := blocks[device]; ok && !val {
+				continue
+			}
 
 			for i, metric := range matches[3:] {
 				key := strings.Replace(metricNames[i], ".", "."+device+".", 1)
@@ -127,6 +136,39 @@ func (i IostatPlugin) MetricKeyPrefix() string {
 		i.Prefix = "disk"
 	}
 	return i.Prefix
+}
+
+func (i IostatPlugin) fetchBlockdevices() (map[string]bool, error) {
+	// Fetch list of block devices.
+	_blocks, err := ioutil.ReadDir("/sys/block")
+	if err != nil {
+		return nil, fmt.Errorf("Cannot read from directory /sys/block/: %s", err)
+	}
+
+	// Generate list of phyisical block devices to skip virtual ones, such as loopback.
+	blocks := make(map[string]bool)
+	for _, block := range _blocks {
+		blocks[block.Name()] = false
+
+		// Check if it's not a symlink.
+		if block.Mode()&os.ModeSymlink != os.ModeSymlink {
+			continue
+		}
+
+		real, err := os.Readlink(fmt.Sprintf("/sys/block/%s", block.Name()))
+		if err != nil {
+			return nil, fmt.Errorf("Cannot read from directory /sys/block/%s: %s", block.Name(), err)
+		}
+
+		// Check if it's a virtual device.
+		if strings.HasPrefix(real, "../devices/virtual/block/") {
+			continue
+		}
+
+		blocks[block.Name()] = true
+	}
+
+	return blocks, nil
 }
 
 func Do() {
