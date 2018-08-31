@@ -13,7 +13,8 @@ import (
 )
 
 type IostatPlugin struct {
-	Prefix string
+	Prefix        string
+	IgnoreVirtual bool
 }
 
 // "Discard"s are introduced in Kernel 4.18. See linux/Documentation/iostats.txt for details.
@@ -85,9 +86,12 @@ func (i IostatPlugin) FetchMetrics() (map[string]float64, error) {
 		return nil, fmt.Errorf("Cannot read from file /proc/diskstats: %s", err)
 	}
 
-	blocks, err := i.fetchBlockdevices()
-	if err != nil {
-		return nil, err
+	blocks := make(map[string]bool)
+	if i.IgnoreVirtual {
+		blocks, err = i.fetchBlockdevices()
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	result := make(map[string]float64)
@@ -176,10 +180,12 @@ func (i IostatPlugin) fetchBlockdevices() (map[string]bool, error) {
 func Do() {
 	optPrefix := flag.String("metric-key-prefix", "disk", "Metric key prefix")
 	optTempfile := flag.String("tempfile", "", "Temp file name")
+	optVirtual := flag.Bool("ignore-virtual", true, "Temp file name")
 	flag.Parse()
 
 	i := IostatPlugin{
-		Prefix: *optPrefix,
+		Prefix:        *optPrefix,
+		IgnoreVirtual: *optVirtual,
 	}
 	plugin := mp.NewMackerelPlugin(i)
 	plugin.Tempfile = *optTempfile
