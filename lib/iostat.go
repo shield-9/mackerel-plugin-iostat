@@ -92,40 +92,40 @@ func (i IostatPlugin) FetchMetrics() (map[string]float64, error) {
 
 	result := make(map[string]float64)
 	for _, line := range strings.Split(string(io), "\n") {
-		if matches := strings.Fields(line); len(matches) > 0 {
-			// Skip for empty line. See https://github.com/golang/go/issues/13075 for details.
-			if len(matches[0]) == 0 {
-				continue
+		matches := strings.Fields(line)
+
+		// Skip for empty line. See https://github.com/golang/go/issues/13075 for details.
+		if len(matches) == 0 || len(matches[0]) == 0 {
+			continue
+		}
+
+		device := matches[2]
+
+		// Skip if it's a virtual.
+		if val, ok := blocks[device]; ok && !val {
+			continue
+		}
+
+		deviceNamePattern := regexp.MustCompile(`[^[[:alnum:]]_-]`)
+		deviceDispName := deviceNamePattern.ReplaceAllString(device, "")
+
+		for i, metric := range matches[3:] {
+			key := strings.Replace(metricNames[i], ".", "."+deviceDispName+".", 1)
+			result[key], err = strconv.ParseFloat(metric, 64)
+			if err != nil {
+				return nil, fmt.Errorf("Failed to parse value: %s", err)
 			}
 
-			device := matches[2]
+			switch strings.Split(key, ".")[0] {
+			case "request", "merge", "sector", "time":
+				/*
+					Mackerel is designed to display metrics in per-minute, while I want "per-second".
 
-			// Skip if it's a virtual.
-			if val, ok := blocks[device]; ok && !val {
-				continue
-			}
+					\frac{(\frac{crntVal}{60} - \frac{lastVal}{60}) * 60}{crntTime - lastTime} = \frac{crntVal - lastVal}{crntTime - lastTime}
 
-			deviceNamePattern := regexp.MustCompile(`[^[[:alnum:]]_-]`)
-			deviceDispName := deviceNamePattern.ReplaceAllString(device, "")
-
-			for i, metric := range matches[3:] {
-				key := strings.Replace(metricNames[i], ".", "."+deviceDispName+".", 1)
-				result[key], err = strconv.ParseFloat(metric, 64)
-				if err != nil {
-					return nil, fmt.Errorf("Failed to parse value: %s", err)
-				}
-
-				switch strings.Split(key, ".")[0] {
-				case "request", "merge", "sector", "time":
-					/*
-						Mackerel is designed to display metrics in per-minute, while I want "per-second".
-
-						\frac{(\frac{crntVal}{60} - \frac{lastVal}{60}) * 60}{crntTime - lastTime} = \frac{crntVal - lastVal}{crntTime - lastTime}
-
-						See https://github.com/mackerelio/go-mackerel-plugin/blob/3980df9bc6311013061fb7ff66498ce23e275bdf/mackerel-plugin.go#L156 for details.
-					*/
-					result[key] /= 60
-				}
+					See https://github.com/mackerelio/go-mackerel-plugin/blob/3980df9bc6311013061fb7ff66498ce23e275bdf/mackerel-plugin.go#L156 for details.
+				*/
+				result[key] /= 60
 			}
 		}
 	}
