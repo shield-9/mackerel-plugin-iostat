@@ -51,7 +51,7 @@ func (i IostatPlugin) GraphDefinition() map[string]mp.Graphs {
 			Unit:  mp.UnitBytesPerSecond,
 			Metrics: []mp.Metrics{
 				// 1 sector is fixed to 512 bytes in Linux system.
-				// See https://github.com/torvalds/linux/blob/b219a1d2de0c025318475e3bbf8e3215cf49d083/Documentation/block/stat.txt#L50 for details.
+				// See https://github.com/torvalds/linux/blob/b219a1d2de0c025318475e3bbf8e3215cf49d083/Documentation/block/stat.txt#L50-L56 for details.
 				{Name: "read", Label: "read", Scale: 2, Diff: true},
 				{Name: "written", Label: "write", Scale: 2, Diff: true},
 			},
@@ -90,6 +90,7 @@ func (i IostatPlugin) FetchMetrics() (map[string]float64, error) {
 
 	blocks := make(map[string]bool)
 
+	// Create list of virtual devices if required.
 	if i.IgnoreVirtual {
 		devices, err := i.fetchBlockdevices()
 		if err != nil {
@@ -148,7 +149,7 @@ func (i IostatPlugin) parseStats(label string, stats []string, metrics map[strin
 	var err error
 
 	for i, metric := range stats[3:] {
-		key := strings.Replace(metricNames[i], ".", "."+label+".", 1)
+		key := strings.Replace(metricNames[i], ".", "."+label+".", 1) // e.g. "time.io" => "time.vda1.io"
 		metrics[key], err = strconv.ParseFloat(metric, 64)
 		if err != nil {
 			return fmt.Errorf("Failed to parse value: %s", err)
